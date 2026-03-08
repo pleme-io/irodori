@@ -1,5 +1,5 @@
 {
-  description = "Iro (色) — theme and color system with Nord palette and semantic color mapping";
+  description = "Irodori (彩り) — theme and color system with Nord palette and semantic color mapping";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -27,7 +27,7 @@
         inherit crate2nix;
       };
       lib = rustLibrary {
-        name = "iro";
+        name = "irodori";
         src = ./.;
       };
     in
@@ -35,7 +35,7 @@
       inherit (lib) packages devShells apps;
 
       overlays.default = final: prev: {
-        iro = self.packages.${final.system}.default;
+        irodori = self.packages.${final.system}.default;
       };
 
       formatter.${system} = pkgs.nixfmt-tree;

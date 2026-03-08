@@ -1,4 +1,4 @@
-# Iro (色) — Theme & Color System
+# Irodori (彩り) — Theme & Color System
 
 ## Build & Test
 
@@ -35,7 +35,7 @@ Shared color and theming library providing:
 ### Usage Pattern
 
 ```rust
-use iro::{Color, SemanticColors, NORD};
+use irodori::{Color, SemanticColors, NORD};
 
 // Direct palette access
 let frost_blue = NORD.frost[1]; // #88C0D0

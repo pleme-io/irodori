@@ -1,4 +1,4 @@
-//! Iro (色) — theme and color system.
+//! Irodori (彩り) — theme and color system.
 //!
 //! Provides the Nord color palette, sRGB/linear conversion, and semantic
 //! color mapping for consistent theming across pleme-io applications.
@@ -6,7 +6,7 @@
 //! # Quick Start
 //!
 //! ```
-//! use iro::{Color, SemanticColors, NORD};
+//! use irodori::{Color, SemanticColors, NORD};
 //!
 //! // Use the full Nord palette directly
 //! let bg = NORD.polar_night[0];

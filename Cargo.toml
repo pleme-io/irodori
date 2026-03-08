@@ -1,11 +1,11 @@
 [package]
-name = "iro"
+name = "irodori"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.89.0"
-description = "Iro (色) — theme and color system with Nord palette and semantic color mapping"
-homepage = "https://github.com/pleme-io/iro"
-repository = "https://github.com/pleme-io/iro"
+description = "Irodori (彩り) — theme and color system with Nord palette and semantic color mapping"
+homepage = "https://github.com/pleme-io/irodori"
+repository = "https://github.com/pleme-io/irodori"
 readme = "README.md"
 license = "MIT"
 categories = ["rendering"]
