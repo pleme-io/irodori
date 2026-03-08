@@ -1,19 +1,14 @@
 {
-  description = "Iro (色) — theme and color system with Nord palette";
+  description = "Iro (色) — theme and color system with Nord palette and semantic color mapping";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    substrate = {
-      url = "github:pleme-io/substrate";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
     {
       self,
       nixpkgs,
-      substrate,
       ...
     }:
     let
