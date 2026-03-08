@@ -52,5 +52,5 @@ let mid = NORD.frost[0].lerp(&NORD.frost[3], 0.5);
 ## Consumers
 
 - **tobira** — app launcher theme colors
-- **karakuri** — window manager border/highlight colors
+- **ayatsuri** — window manager border/highlight colors
 - **hikyaku** — email client UI theme
