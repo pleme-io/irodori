@@ -1,0 +1,23 @@
+[package]
+name = "iro"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89.0"
+description = "Iro (色) — theme and color system with Nord palette and semantic color mapping"
+homepage = "https://github.com/pleme-io/iro"
+repository = "https://github.com/pleme-io/iro"
+readme = "README.md"
+license = "MIT"
+categories = ["rendering"]
+keywords = ["color", "theme", "nord", "palette"]
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"
