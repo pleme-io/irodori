@@ -466,4 +466,404 @@ mod tests {
         let c = Color::new(0xBF, 0x61, 0x6A);
         assert_eq!(format!("{c}"), c.to_hex());
     }
+
+    // -- Hex parsing: additional edge cases --------------------------------
+
+    #[test]
+    fn from_hex_hash_only() {
+        let err = Color::from_hex("#").unwrap_err();
+        assert_eq!(err, HexParseError::InvalidLength(0));
+    }
+
+    #[test]
+    fn from_hex_all_zeros() {
+        let c = Color::from_hex("#000000").unwrap();
+        assert_eq!(c, Color::new(0, 0, 0));
+    }
+
+    #[test]
+    fn from_hex_all_ffs() {
+        let c = Color::from_hex("#FFFFFF").unwrap();
+        assert_eq!(c, Color::new(255, 255, 255));
+    }
+
+    #[test]
+    fn from_hex_mixed_case() {
+        let c = Color::from_hex("#aAbBcC").unwrap();
+        assert_eq!(c, Color::new(0xAA, 0xBB, 0xCC));
+    }
+
+    #[test]
+    fn from_hex_five_digits() {
+        let err = Color::from_hex("12345").unwrap_err();
+        assert_eq!(err, HexParseError::InvalidLength(5));
+    }
+
+    #[test]
+    fn from_hex_seven_digits_no_hash() {
+        let err = Color::from_hex("1234567").unwrap_err();
+        assert_eq!(err, HexParseError::InvalidLength(7));
+    }
+
+    #[test]
+    fn from_hex_invalid_in_green_channel() {
+        let err = Color::from_hex("#FFZZ00").unwrap_err();
+        assert_eq!(err, HexParseError::InvalidChar);
+    }
+
+    #[test]
+    fn from_hex_invalid_in_blue_channel() {
+        let err = Color::from_hex("#FF00GG").unwrap_err();
+        assert_eq!(err, HexParseError::InvalidChar);
+    }
+
+    #[test]
+    fn to_hex_preserves_leading_zeros() {
+        let c = Color::new(0x01, 0x02, 0x03);
+        assert_eq!(c.to_hex(), "#010203");
+    }
+
+    // -- HexParseError Display ---------------------------------------------
+
+    #[test]
+    fn hex_parse_error_display_invalid_length() {
+        let err = HexParseError::InvalidLength(3);
+        assert_eq!(format!("{err}"), "expected 6 hex digits, got 3");
+    }
+
+    #[test]
+    fn hex_parse_error_display_invalid_char() {
+        let err = HexParseError::InvalidChar;
+        assert_eq!(format!("{err}"), "invalid hex character");
+    }
+
+    #[test]
+    fn hex_parse_error_is_error_trait() {
+        let err: Box<dyn std::error::Error> =
+            Box::new(HexParseError::InvalidChar);
+        assert_eq!(format!("{err}"), "invalid hex character");
+    }
+
+    // -- sRGB/linear transfer function precision ---------------------------
+
+    #[test]
+    fn srgb_to_linear_below_threshold() {
+        // For sRGB value 0.04045, this is the boundary of the linear region.
+        // Below threshold: linear = sRGB / 12.92
+        let val = 0.04045_f32;
+        let lin = srgb_to_linear(val);
+        let expected = val / 12.92;
+        assert!(
+            (lin - expected).abs() < 1e-7,
+            "below threshold: expected {expected}, got {lin}"
+        );
+    }
+
+    #[test]
+    fn srgb_to_linear_above_threshold() {
+        // 0.5 is well above the threshold; use the power curve.
+        let lin = srgb_to_linear(0.5);
+        let expected = ((0.5 + 0.055) / 1.055_f32).powf(2.4);
+        assert!(
+            (lin - expected).abs() < 1e-7,
+            "above threshold: expected {expected}, got {lin}"
+        );
+    }
+
+    #[test]
+    fn linear_to_srgb_below_threshold() {
+        let val = 0.003_f32; // below 0.003_130_8
+        let srgb = linear_to_srgb(val);
+        let expected = val * 12.92;
+        assert!(
+            (srgb - expected).abs() < 1e-7,
+            "below threshold: expected {expected}, got {srgb}"
+        );
+    }
+
+    #[test]
+    fn linear_to_srgb_above_threshold() {
+        let val = 0.5_f32;
+        let srgb = linear_to_srgb(val);
+        let expected = 1.055 * val.powf(1.0 / 2.4) - 0.055;
+        assert!(
+            (srgb - expected).abs() < 1e-7,
+            "above threshold: expected {expected}, got {srgb}"
+        );
+    }
+
+    #[test]
+    fn srgb_linear_roundtrip_all_byte_values() {
+        // Every possible u8 value should survive the sRGB->linear->sRGB roundtrip.
+        for i in 0..=255_u8 {
+            let srgb_f = f32::from(i) / 255.0;
+            let lin = srgb_to_linear(srgb_f);
+            let back = linear_to_srgb(lin);
+            let back_u8 = (back * 255.0).round() as u8;
+            assert_eq!(
+                i, back_u8,
+                "roundtrip failed for sRGB byte {i}: linear={lin}, back_srgb={back}"
+            );
+        }
+    }
+
+    #[test]
+    fn to_linear_monotonic() {
+        // Linear values must be monotonically non-decreasing as sRGB increases.
+        let mut prev = 0.0_f32;
+        for i in 0..=255_u8 {
+            let lin = srgb_to_linear(f32::from(i) / 255.0);
+            assert!(
+                lin >= prev,
+                "monotonicity violated at sRGB {i}: {lin} < {prev}"
+            );
+            prev = lin;
+        }
+    }
+
+    #[test]
+    fn to_linear_values_in_unit_range() {
+        // All linear values for valid sRGB must be in [0, 1].
+        for i in 0..=255_u8 {
+            let lin = srgb_to_linear(f32::from(i) / 255.0);
+            assert!(
+                (0.0..=1.0).contains(&lin),
+                "linear value out of range for sRGB {i}: {lin}"
+            );
+        }
+    }
+
+    #[test]
+    fn linear_to_srgb_clamps_negative() {
+        // Negative linear input should clamp to 0.
+        let result = linear_to_srgb(-0.5);
+        assert!(
+            result.abs() < 1e-7,
+            "expected ~0 for negative input, got {result}"
+        );
+    }
+
+    #[test]
+    fn linear_to_srgb_clamps_above_one() {
+        // Input > 1 should clamp to 1.
+        let result = linear_to_srgb(1.5);
+        assert!(
+            (result - 1.0).abs() < 0.01,
+            "expected ~1 for input > 1, got {result}"
+        );
+    }
+
+    // -- Gamma roundtrip for all Nord colors -------------------------------
+
+    #[test]
+    fn linear_roundtrip_all_nord_colors() {
+        let all_colors: Vec<Color> = NORD
+            .polar_night
+            .iter()
+            .chain(NORD.snow_storm.iter())
+            .chain(NORD.frost.iter())
+            .chain(NORD.aurora.iter())
+            .copied()
+            .collect();
+        for c in all_colors {
+            let linear = c.to_linear();
+            let back = Color::from_linear(linear);
+            assert_eq!(
+                c, back,
+                "linear roundtrip failed for {c}: linear={linear:?}"
+            );
+        }
+    }
+
+    // -- from_rgb_f32 edge cases -------------------------------------------
+
+    #[test]
+    fn from_rgb_f32_exact_boundaries() {
+        let c = Color::from_rgb_f32([0.0, 1.0, 0.0]);
+        assert_eq!(c, Color::new(0, 255, 0));
+    }
+
+    #[test]
+    fn from_rgb_f32_negative_clamps_to_zero() {
+        let c = Color::from_rgb_f32([-1.0, -0.001, -100.0]);
+        assert_eq!(c, Color::new(0, 0, 0));
+    }
+
+    #[test]
+    fn from_rgb_f32_above_one_clamps_to_255() {
+        let c = Color::from_rgb_f32([1.001, 2.0, 100.0]);
+        assert_eq!(c, Color::new(255, 255, 255));
+    }
+
+    // -- Lerp edge cases ---------------------------------------------------
+
+    #[test]
+    fn lerp_negative_t_clamps_to_zero() {
+        let a = Color::new(100, 100, 100);
+        let b = Color::new(200, 200, 200);
+        assert_eq!(a.lerp(&b, -0.5), a);
+    }
+
+    #[test]
+    fn lerp_t_above_one_clamps_to_one() {
+        let a = Color::new(100, 100, 100);
+        let b = Color::new(200, 200, 200);
+        assert_eq!(a.lerp(&b, 1.5), b);
+    }
+
+    #[test]
+    fn lerp_same_color_returns_same() {
+        let c = Color::new(42, 128, 200);
+        assert_eq!(c.lerp(&c, 0.5), c);
+    }
+
+    #[test]
+    fn lerp_non_uniform_channels() {
+        let a = Color::new(0, 100, 200);
+        let b = Color::new(100, 200, 50);
+        let mid = a.lerp(&b, 0.5);
+        assert_eq!(mid, Color::new(50, 150, 125));
+    }
+
+    #[test]
+    fn lerp_quarter() {
+        let a = Color::new(0, 0, 0);
+        let b = Color::new(200, 200, 200);
+        let quarter = a.lerp(&b, 0.25);
+        assert_eq!(quarter, Color::new(50, 50, 50));
+    }
+
+    #[test]
+    fn lerp_is_not_necessarily_symmetric() {
+        // Due to u8 quantization, a.lerp(b, t) may differ from b.lerp(a, 1-t).
+        // This test documents that behavior rather than asserting strict symmetry.
+        let a = Color::new(0, 0, 0);
+        let b = Color::new(255, 255, 255);
+        let ab = a.lerp(&b, 0.3);
+        let ba = b.lerp(&a, 0.7);
+        // With 255 and 0, these happen to be the same due to exact math.
+        assert_eq!(ab, ba);
+    }
+
+    #[test]
+    fn lerp_between_nord_frost_endpoints() {
+        let a = NORD.frost[0]; // #8FBCBB
+        let b = NORD.frost[3]; // #5E81AC
+        let mid = a.lerp(&b, 0.5);
+        // Midpoints: (0x8F+0x5E)/2 = 118.5 -> 119 (0x77)
+        //            (0xBC+0x81)/2 = 158.5 -> 159 (0x9F)
+        //            (0xBB+0xAC)/2 = 179.5 -> 180 (0xB4)
+        // Using float: (143+94)/2=118.5, (188+129)/2=158.5, (187+172)/2=179.5
+        // After f32 division by 255 and back: verify approximately correct.
+        let expected_r = ((f32::from(0x8F_u8) / 255.0 + f32::from(0x5E_u8) / 255.0) / 2.0 * 255.0).round() as u8;
+        let expected_g = ((f32::from(0xBC_u8) / 255.0 + f32::from(0x81_u8) / 255.0) / 2.0 * 255.0).round() as u8;
+        let expected_b = ((f32::from(0xBB_u8) / 255.0 + f32::from(0xAC_u8) / 255.0) / 2.0 * 255.0).round() as u8;
+        assert_eq!(mid, Color::new(expected_r, expected_g, expected_b));
+    }
+
+    // -- with_alpha additional tests ---------------------------------------
+
+    #[test]
+    fn with_alpha_zero() {
+        let c = Color::new(128, 64, 32);
+        let rgba = c.with_alpha(0.0);
+        assert!((rgba[3]).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn with_alpha_one() {
+        let c = Color::new(128, 64, 32);
+        let rgba = c.with_alpha(1.0);
+        assert!((rgba[3] - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn with_alpha_rgb_channels_match_to_rgb_f32() {
+        let c = Color::new(0xBF, 0x61, 0x6A);
+        let rgb = c.to_rgb_f32();
+        let rgba = c.with_alpha(0.75);
+        assert_eq!(rgba[0], rgb[0]);
+        assert_eq!(rgba[1], rgb[1]);
+        assert_eq!(rgba[2], rgb[2]);
+    }
+
+    // -- to_linear known reference values ----------------------------------
+
+    #[test]
+    fn to_linear_pure_red() {
+        // sRGB (255, 0, 0) -> linear (1.0, 0.0, 0.0)
+        let lin = Color::new(255, 0, 0).to_linear();
+        assert!((lin[0] - 1.0).abs() < 1e-5);
+        assert!(lin[1].abs() < 1e-7);
+        assert!(lin[2].abs() < 1e-7);
+    }
+
+    #[test]
+    fn to_linear_srgb_half_is_not_linear_half() {
+        // sRGB 0.5 (byte ~128) should NOT map to linear 0.5
+        let lin = Color::new(128, 128, 128).to_linear();
+        for ch in lin {
+            assert!(
+                (ch - 0.5).abs() > 0.1,
+                "linear should differ significantly from 0.5, got {ch}"
+            );
+        }
+    }
+
+    // -- Color copy/clone/eq semantics ------------------------------------
+
+    #[test]
+    fn color_copy_semantics() {
+        let a = Color::new(10, 20, 30);
+        let b = a; // Copy
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn color_clone_equals_original() {
+        let a = Color::new(10, 20, 30);
+        #[allow(clippy::clone_on_copy)]
+        let b = a.clone();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn color_ne_different_channels() {
+        let a = Color::new(10, 20, 30);
+        let b = Color::new(10, 20, 31);
+        assert_ne!(a, b);
+    }
+
+    // -- Serde additional tests -------------------------------------------
+
+    #[test]
+    fn serde_color_json_structure() {
+        let c = Color::new(0xFF, 0x00, 0x80);
+        let json = serde_json::to_string(&c).unwrap();
+        // Verify the JSON contains expected field names
+        assert!(json.contains("\"r\":255"), "JSON: {json}");
+        assert!(json.contains("\"g\":0"), "JSON: {json}");
+        assert!(json.contains("\"b\":128"), "JSON: {json}");
+    }
+
+    #[test]
+    fn serde_color_from_json_object() {
+        let json = r#"{"r":46,"g":52,"b":64}"#;
+        let c: Color = serde_json::from_str(json).unwrap();
+        assert_eq!(c, Color::new(0x2E, 0x34, 0x40));
+    }
+
+    // -- Display additional tests -----------------------------------------
+
+    #[test]
+    fn display_black() {
+        let c = Color::new(0, 0, 0);
+        assert_eq!(format!("{c}"), "#000000");
+    }
+
+    #[test]
+    fn display_white() {
+        let c = Color::new(255, 255, 255);
+        assert_eq!(format!("{c}"), "#FFFFFF");
+    }
 }

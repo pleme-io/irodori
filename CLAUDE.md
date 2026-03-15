@@ -4,7 +4,7 @@
 
 ```bash
 cargo build          # compile
-cargo test           # 43 unit tests + 1 doc-test
+cargo test           # 96 unit tests + 1 doc-test
 ```
 
 ## Architecture
@@ -21,8 +21,8 @@ Shared color and theming library providing:
 | Path | Purpose |
 |------|---------|
 | `src/lib.rs` | Re-exports Color, HexParseError, NordPalette, SemanticColors, NORD |
-| `src/palette.rs` | `Color` (u8 sRGB), `NordPalette`, `NORD` const, `HexParseError` (30 tests) |
-| `src/semantic.rs` | `SemanticColors` — UI role to color mapping via `from_palette()` (13 tests) |
+| `src/palette.rs` | `Color` (u8 sRGB), `NordPalette`, `NORD` const, `HexParseError` (75 tests) |
+| `src/semantic.rs` | `SemanticColors` — UI role to color mapping via `from_palette()` (21 tests) |
 
 ### Key Types
 

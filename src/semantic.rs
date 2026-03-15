@@ -169,4 +169,163 @@ mod tests {
         assert!(display.contains("#2E3440"), "should contain background hex");
         assert!(display.contains("#88C0D0"), "should contain accent hex");
     }
+
+    // -- Custom palette mapping -------------------------------------------
+
+    #[test]
+    fn from_custom_palette_maps_correctly() {
+        let custom = NordPalette {
+            polar_night: [
+                Color::new(10, 10, 10),
+                Color::new(20, 20, 20),
+                Color::new(30, 30, 30),
+                Color::new(40, 40, 40),
+            ],
+            snow_storm: [
+                Color::new(200, 200, 200),
+                Color::new(210, 210, 210),
+                Color::new(220, 220, 220),
+            ],
+            frost: [
+                Color::new(50, 100, 150),
+                Color::new(60, 110, 160),
+                Color::new(70, 120, 170),
+                Color::new(80, 130, 180),
+            ],
+            aurora: [
+                Color::new(200, 50, 50),
+                Color::new(210, 100, 50),
+                Color::new(220, 180, 80),
+                Color::new(100, 180, 100),
+                Color::new(150, 100, 150),
+            ],
+        };
+        let sem = SemanticColors::from_palette(&custom);
+        assert_eq!(sem.background, custom.polar_night[0]);
+        assert_eq!(sem.foreground, custom.snow_storm[0]);
+        assert_eq!(sem.accent, custom.frost[1]);
+        assert_eq!(sem.selection, custom.frost[2]);
+        assert_eq!(sem.error, custom.aurora[0]);
+        assert_eq!(sem.warning, custom.aurora[2]);
+        assert_eq!(sem.success, custom.aurora[3]);
+        assert_eq!(sem.muted, custom.polar_night[3]);
+        assert_eq!(sem.border, custom.polar_night[2]);
+    }
+
+    // -- All fields are distinct for Nord ---------------------------------
+
+    #[test]
+    fn nord_semantic_fields_are_distinct_colors() {
+        let c = SemanticColors::nord();
+        let all = [
+            c.background, c.foreground, c.accent, c.selection,
+            c.error, c.warning, c.success, c.muted, c.border,
+        ];
+        // Each pair should be distinct (no duplicates in the Nord mapping).
+        for i in 0..all.len() {
+            for j in (i + 1)..all.len() {
+                assert_ne!(
+                    all[i], all[j],
+                    "fields at index {i} and {j} should differ"
+                );
+            }
+        }
+    }
+
+    // -- Semantic colors to_linear produces valid GPU values ---------------
+
+    #[test]
+    fn semantic_colors_linear_values_in_range() {
+        let c = SemanticColors::nord();
+        let all = [
+            c.background, c.foreground, c.accent, c.selection,
+            c.error, c.warning, c.success, c.muted, c.border,
+        ];
+        for color in all {
+            let lin = color.to_linear();
+            for (i, ch) in lin.iter().enumerate() {
+                assert!(
+                    (0.0..=1.0).contains(ch),
+                    "channel {i} of {color} out of range: {ch}"
+                );
+            }
+        }
+    }
+
+    // -- Copy/Clone/Eq semantics ------------------------------------------
+
+    #[test]
+    fn semantic_colors_copy() {
+        let a = SemanticColors::nord();
+        let b = a; // Copy
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn semantic_colors_clone() {
+        let a = SemanticColors::nord();
+        #[allow(clippy::clone_on_copy)]
+        let b = a.clone();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn semantic_colors_ne_when_field_differs() {
+        let mut a = SemanticColors::nord();
+        let b = SemanticColors::nord();
+        a.background = Color::new(0, 0, 0);
+        assert_ne!(a, b);
+    }
+
+    // -- Display format structure -----------------------------------------
+
+    #[test]
+    fn display_contains_all_semantic_labels() {
+        let display = format!("{}", SemanticColors::nord());
+        for label in &["bg:", "fg:", "accent:", "sel:", "err:", "warn:", "ok:", "muted:", "border:"] {
+            assert!(
+                display.contains(label),
+                "display should contain '{label}': {display}"
+            );
+        }
+    }
+
+    #[test]
+    fn display_contains_all_hex_values() {
+        let c = SemanticColors::nord();
+        let display = format!("{c}");
+        let expected_hexes = [
+            c.background.to_hex(),
+            c.foreground.to_hex(),
+            c.accent.to_hex(),
+            c.selection.to_hex(),
+            c.error.to_hex(),
+            c.warning.to_hex(),
+            c.success.to_hex(),
+            c.muted.to_hex(),
+            c.border.to_hex(),
+        ];
+        for hex in &expected_hexes {
+            assert!(
+                display.contains(hex.as_str()),
+                "display should contain {hex}: {display}"
+            );
+        }
+    }
+
+    // -- Serde field names -----------------------------------------------
+
+    #[test]
+    fn serde_semantic_json_field_names() {
+        let json = serde_json::to_string(&SemanticColors::nord()).unwrap();
+        for field in &[
+            "background", "foreground", "accent", "selection",
+            "error", "warning", "success", "muted", "border",
+        ] {
+            assert!(
+                json.contains(field),
+                "JSON should contain field '{field}': {json}"
+            );
+        }
+    }
 }
