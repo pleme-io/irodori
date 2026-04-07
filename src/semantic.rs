@@ -59,6 +59,42 @@ impl SemanticColors {
             border:     palette.polar_night[2],  // nord2  #434C5E
         }
     }
+
+    /// Number of semantic color roles.
+    pub const FIELD_COUNT: usize = 9;
+
+    /// Returns an iterator over `(role_name, Color)` pairs for all fields.
+    #[must_use]
+    pub fn iter(&self) -> std::array::IntoIter<(&'static str, Color), 9> {
+        [
+            ("background", self.background),
+            ("foreground", self.foreground),
+            ("accent", self.accent),
+            ("selection", self.selection),
+            ("error", self.error),
+            ("warning", self.warning),
+            ("success", self.success),
+            ("muted", self.muted),
+            ("border", self.border),
+        ]
+        .into_iter()
+    }
+
+    /// Returns all semantic colors as an array (field order).
+    #[must_use]
+    pub fn colors(&self) -> [Color; 9] {
+        [
+            self.background,
+            self.foreground,
+            self.accent,
+            self.selection,
+            self.error,
+            self.warning,
+            self.success,
+            self.muted,
+            self.border,
+        ]
+    }
 }
 
 impl Default for SemanticColors {
@@ -373,6 +409,63 @@ mod tests {
         let json = serde_json::to_string_pretty(&nord).unwrap();
         let back: SemanticColors = serde_json::from_str(&json).unwrap();
         assert_eq!(nord, back);
+    }
+
+    // -- iter() and colors() -----------------------------------------------
+
+    #[test]
+    fn iter_yields_nine_pairs() {
+        let c = SemanticColors::nord();
+        assert_eq!(c.iter().count(), 9);
+    }
+
+    #[test]
+    fn iter_first_is_background() {
+        let c = SemanticColors::nord();
+        let (name, color) = c.iter().next().unwrap();
+        assert_eq!(name, "background");
+        assert_eq!(color, c.background);
+    }
+
+    #[test]
+    fn iter_last_is_border() {
+        let c = SemanticColors::nord();
+        let (name, color) = c.iter().last().unwrap();
+        assert_eq!(name, "border");
+        assert_eq!(color, c.border);
+    }
+
+    #[test]
+    fn iter_names_match_expected() {
+        let names: Vec<&str> = SemanticColors::nord().iter().map(|(n, _)| n).collect();
+        assert_eq!(
+            names,
+            vec![
+                "background", "foreground", "accent", "selection",
+                "error", "warning", "success", "muted", "border",
+            ]
+        );
+    }
+
+    #[test]
+    fn colors_returns_nine_elements() {
+        assert_eq!(SemanticColors::nord().colors().len(), 9);
+    }
+
+    #[test]
+    fn colors_matches_iter_values() {
+        let c = SemanticColors::nord();
+        let from_colors = c.colors();
+        let from_iter: Vec<Color> = c.iter().map(|(_, color)| color).collect();
+        assert_eq!(&from_colors[..], from_iter.as_slice());
+    }
+
+    #[test]
+    fn field_count_matches_iter_len() {
+        assert_eq!(
+            SemanticColors::FIELD_COUNT,
+            SemanticColors::nord().iter().count()
+        );
     }
 
     // -- proptest property tests for SemanticColors ----------------------------
