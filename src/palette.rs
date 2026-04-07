@@ -136,6 +136,18 @@ impl Color {
         0.2126 * r + 0.7152 * g + 0.0722 * b
     }
 
+    /// Computes the WCAG 2.1 contrast ratio between `self` and `other`.
+    ///
+    /// Returns a value in `[1.0, 21.0]`. WCAG AA requires ≥4.5 for normal
+    /// text and ≥3.0 for large text.
+    #[must_use]
+    pub fn contrast_ratio(&self, other: &Color) -> f32 {
+        let l1 = self.luminance();
+        let l2 = other.luminance();
+        let (lighter, darker) = if l1 > l2 { (l1, l2) } else { (l2, l1) };
+        (lighter + 0.05) / (darker + 0.05)
+    }
+
     /// Returns an RGBA float array with the given alpha.
     ///
     /// The RGB channels are in sRGB `[0.0, 1.0]` space; `alpha` is clamped
@@ -596,6 +608,37 @@ mod tests {
         for &c in &NORD.snow_storm {
             assert!(c.luminance() > 0.5, "{c} luminance = {}", c.luminance());
         }
+    }
+
+    // -- contrast_ratio -------------------------------------------------
+
+    #[test]
+    fn contrast_ratio_black_white() {
+        let ratio = Color::new(0, 0, 0).contrast_ratio(&Color::new(255, 255, 255));
+        assert!((ratio - 21.0).abs() < 0.1, "expected ~21, got {ratio}");
+    }
+
+    #[test]
+    fn contrast_ratio_same_color_is_one() {
+        let c = Color::new(128, 64, 32);
+        let ratio = c.contrast_ratio(&c);
+        assert!((ratio - 1.0).abs() < 1e-5, "expected 1.0, got {ratio}");
+    }
+
+    #[test]
+    fn contrast_ratio_is_symmetric() {
+        let a = NORD.polar_night[0];
+        let b = NORD.snow_storm[0];
+        let ab = a.contrast_ratio(&b);
+        let ba = b.contrast_ratio(&a);
+        assert!((ab - ba).abs() < 1e-5, "not symmetric: {ab} vs {ba}");
+    }
+
+    #[test]
+    fn nord_fg_bg_passes_wcag_aa() {
+        let theme = crate::SemanticColors::nord();
+        let ratio = theme.background.contrast_ratio(&theme.foreground);
+        assert!(ratio >= 4.5, "WCAG AA requires ≥4.5, got {ratio}");
     }
 
     // -- with_alpha -----------------------------------------------------
