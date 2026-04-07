@@ -33,7 +33,8 @@ impl Color {
     /// Parses a hex color string (with or without leading `#`).
     ///
     /// Accepts `"#2E3440"` or `"2E3440"` (case-insensitive, 6 hex digits).
-    pub fn from_hex(hex: &str) -> Result<Self, HexParseError> {
+    pub fn from_hex(hex: impl AsRef<str>) -> Result<Self, HexParseError> {
+        let hex = hex.as_ref();
         let hex = hex.strip_prefix('#').unwrap_or(hex);
         if hex.len() != 6 {
             return Err(HexParseError::InvalidLength(hex.len()));
@@ -155,6 +156,14 @@ impl From<(u8, u8, u8)> for Color {
 impl From<Color> for (u8, u8, u8) {
     fn from(c: Color) -> Self {
         (c.r, c.g, c.b)
+    }
+}
+
+impl TryFrom<&str> for Color {
+    type Error = HexParseError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Self::from_hex(s)
     }
 }
 
@@ -1000,6 +1009,25 @@ mod tests {
     #[test]
     fn from_str_without_hash() {
         let c: Color = "2E3440".parse().unwrap();
+        assert_eq!(c, Color::new(0x2E, 0x34, 0x40));
+    }
+
+    #[test]
+    fn try_from_str() {
+        let c = Color::try_from("#88C0D0").unwrap();
+        assert_eq!(c, Color::new(0x88, 0xC0, 0xD0));
+    }
+
+    #[test]
+    fn try_from_str_invalid() {
+        let err = Color::try_from("ZZZ").unwrap_err();
+        assert_eq!(err, HexParseError::InvalidLength(3));
+    }
+
+    #[test]
+    fn from_hex_accepts_string() {
+        let s = String::from("#2E3440");
+        let c = Color::from_hex(s).unwrap();
         assert_eq!(c, Color::new(0x2E, 0x34, 0x40));
     }
 
