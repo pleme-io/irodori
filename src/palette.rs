@@ -125,6 +125,17 @@ impl Color {
         ])
     }
 
+    /// Computes the relative luminance per ITU-R BT.709.
+    ///
+    /// Returns a value in `[0.0, 1.0]` where 0 is black and 1 is white.
+    /// Useful for contrast ratio calculations and choosing light/dark
+    /// foreground colors.
+    #[must_use]
+    pub fn luminance(&self) -> f32 {
+        let [r, g, b] = self.to_linear();
+        0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+
     /// Returns an RGBA float array with the given alpha.
     ///
     /// The RGB channels are in sRGB `[0.0, 1.0]` space; `alpha` is clamped
@@ -526,6 +537,52 @@ mod tests {
         let mid = a.lerp(&b, 0.5);
         // 254 * 0.5 = 127
         assert_eq!(mid, Color::new(127, 127, 127));
+    }
+
+    // -- luminance ------------------------------------------------------
+
+    #[test]
+    fn luminance_black_is_zero() {
+        assert!(Color::new(0, 0, 0).luminance().abs() < 1e-7);
+    }
+
+    #[test]
+    fn luminance_white_is_one() {
+        assert!((Color::new(255, 255, 255).luminance() - 1.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn luminance_pure_green_dominates() {
+        let red_lum = Color::new(255, 0, 0).luminance();
+        let green_lum = Color::new(0, 255, 0).luminance();
+        let blue_lum = Color::new(0, 0, 255).luminance();
+        assert!(green_lum > red_lum);
+        assert!(green_lum > blue_lum);
+    }
+
+    #[test]
+    fn luminance_in_unit_range() {
+        for color in &NORD {
+            let lum = color.luminance();
+            assert!(
+                (0.0..=1.0).contains(&lum),
+                "luminance {lum} out of range for {color}"
+            );
+        }
+    }
+
+    #[test]
+    fn nord_dark_colors_have_low_luminance() {
+        for &c in &NORD.polar_night {
+            assert!(c.luminance() < 0.15, "{c} luminance = {}", c.luminance());
+        }
+    }
+
+    #[test]
+    fn nord_light_colors_have_high_luminance() {
+        for &c in &NORD.snow_storm {
+            assert!(c.luminance() > 0.5, "{c} luminance = {}", c.luminance());
+        }
     }
 
     // -- with_alpha -----------------------------------------------------
