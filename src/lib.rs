@@ -21,4 +21,4 @@ pub mod palette;
 pub mod semantic;
 
 pub use palette::{Color, HexParseError, NordPalette, NORD};
-pub use semantic::SemanticColors;
+pub use semantic::{SemanticColors, SemanticColorsBuilder};

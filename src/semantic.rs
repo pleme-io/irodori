@@ -97,6 +97,106 @@ impl SemanticColors {
     }
 }
 
+/// Builder for constructing [`SemanticColors`] with selective overrides.
+///
+/// Starts from a base (defaulting to [`SemanticColors::nord()`]) and allows
+/// overriding individual roles before building.
+#[derive(Debug, Clone, Copy)]
+pub struct SemanticColorsBuilder {
+    inner: SemanticColors,
+}
+
+impl SemanticColorsBuilder {
+    /// Creates a builder starting from the Nord theme.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            inner: SemanticColors::nord(),
+        }
+    }
+
+    /// Creates a builder starting from an existing `SemanticColors`.
+    #[must_use]
+    pub const fn from_base(base: SemanticColors) -> Self {
+        Self { inner: base }
+    }
+
+    /// Override the background color.
+    #[must_use]
+    pub const fn background(mut self, color: Color) -> Self {
+        self.inner.background = color;
+        self
+    }
+
+    /// Override the foreground color.
+    #[must_use]
+    pub const fn foreground(mut self, color: Color) -> Self {
+        self.inner.foreground = color;
+        self
+    }
+
+    /// Override the accent color.
+    #[must_use]
+    pub const fn accent(mut self, color: Color) -> Self {
+        self.inner.accent = color;
+        self
+    }
+
+    /// Override the selection color.
+    #[must_use]
+    pub const fn selection(mut self, color: Color) -> Self {
+        self.inner.selection = color;
+        self
+    }
+
+    /// Override the error color.
+    #[must_use]
+    pub const fn error(mut self, color: Color) -> Self {
+        self.inner.error = color;
+        self
+    }
+
+    /// Override the warning color.
+    #[must_use]
+    pub const fn warning(mut self, color: Color) -> Self {
+        self.inner.warning = color;
+        self
+    }
+
+    /// Override the success color.
+    #[must_use]
+    pub const fn success(mut self, color: Color) -> Self {
+        self.inner.success = color;
+        self
+    }
+
+    /// Override the muted color.
+    #[must_use]
+    pub const fn muted(mut self, color: Color) -> Self {
+        self.inner.muted = color;
+        self
+    }
+
+    /// Override the border color.
+    #[must_use]
+    pub const fn border(mut self, color: Color) -> Self {
+        self.inner.border = color;
+        self
+    }
+
+    /// Consume the builder and return the final `SemanticColors`.
+    #[must_use]
+    pub const fn build(self) -> SemanticColors {
+        self.inner
+    }
+}
+
+impl Default for SemanticColorsBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Default for SemanticColors {
     fn default() -> Self {
         Self::nord()
@@ -409,6 +509,54 @@ mod tests {
         let json = serde_json::to_string_pretty(&nord).unwrap();
         let back: SemanticColors = serde_json::from_str(&json).unwrap();
         assert_eq!(nord, back);
+    }
+
+    // -- Builder ----------------------------------------------------------
+
+    #[test]
+    fn builder_default_is_nord() {
+        let built = SemanticColorsBuilder::new().build();
+        assert_eq!(built, SemanticColors::nord());
+    }
+
+    #[test]
+    fn builder_override_background() {
+        let custom_bg = Color::new(0, 0, 0);
+        let theme = SemanticColorsBuilder::new()
+            .background(custom_bg)
+            .build();
+        assert_eq!(theme.background, custom_bg);
+        assert_eq!(theme.foreground, SemanticColors::nord().foreground);
+    }
+
+    #[test]
+    fn builder_chain_multiple_overrides() {
+        let red = Color::new(255, 0, 0);
+        let green = Color::new(0, 255, 0);
+        let theme = SemanticColorsBuilder::new()
+            .error(red)
+            .success(green)
+            .build();
+        assert_eq!(theme.error, red);
+        assert_eq!(theme.success, green);
+        assert_eq!(theme.accent, SemanticColors::nord().accent);
+    }
+
+    #[test]
+    fn builder_from_base() {
+        let mut base = SemanticColors::nord();
+        base.background = Color::new(0, 0, 0);
+        let theme = SemanticColorsBuilder::from_base(base)
+            .foreground(Color::new(255, 255, 255))
+            .build();
+        assert_eq!(theme.background, Color::new(0, 0, 0));
+        assert_eq!(theme.foreground, Color::new(255, 255, 255));
+    }
+
+    #[test]
+    fn builder_default_trait() {
+        let built = SemanticColorsBuilder::default().build();
+        assert_eq!(built, SemanticColors::nord());
     }
 
     // -- iter() and colors() -----------------------------------------------
