@@ -233,25 +233,31 @@ impl NordPalette {
     /// Returns all 16 palette colors in Nord index order (nord0..nord15).
     #[must_use]
     pub fn all_colors(&self) -> [Color; 16] {
-        let mut out = [Color::new(0, 0, 0); 16];
-        let mut i = 0;
-        for &c in &self.polar_night {
-            out[i] = c;
-            i += 1;
-        }
-        for &c in &self.snow_storm {
-            out[i] = c;
-            i += 1;
-        }
-        for &c in &self.frost {
-            out[i] = c;
-            i += 1;
-        }
-        for &c in &self.aurora {
-            out[i] = c;
-            i += 1;
-        }
-        out
+        let pn = &self.polar_night;
+        let ss = &self.snow_storm;
+        let fr = &self.frost;
+        let au = &self.aurora;
+        [
+            pn[0], pn[1], pn[2], pn[3],
+            ss[0], ss[1], ss[2],
+            fr[0], fr[1], fr[2], fr[3],
+            au[0], au[1], au[2], au[3], au[4],
+        ]
+    }
+
+    /// Returns an iterator over all 16 palette colors in Nord index order.
+    #[must_use]
+    pub fn iter(&self) -> std::array::IntoIter<Color, 16> {
+        self.all_colors().into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a NordPalette {
+    type Item = Color;
+    type IntoIter = std::array::IntoIter<Color, 16>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
@@ -1047,6 +1053,36 @@ mod tests {
             offset += 1;
         }
         assert_eq!(offset, 16);
+    }
+
+    // -- NordPalette::iter and IntoIterator --------------------------------
+
+    #[test]
+    fn iter_yields_16_colors() {
+        assert_eq!(NORD.iter().count(), 16);
+    }
+
+    #[test]
+    fn iter_matches_all_colors() {
+        let from_iter: Vec<Color> = NORD.iter().collect();
+        let from_array = NORD.all_colors();
+        assert_eq!(from_iter.as_slice(), &from_array);
+    }
+
+    #[test]
+    fn into_iterator_for_ref() {
+        let colors: Vec<Color> = (&NORD).into_iter().collect();
+        assert_eq!(colors.len(), 16);
+        assert_eq!(colors[0], NORD.polar_night[0]);
+    }
+
+    #[test]
+    fn for_loop_over_palette_ref() {
+        let mut count = 0;
+        for _color in &NORD {
+            count += 1;
+        }
+        assert_eq!(count, 16);
     }
 
     // -- proptest property-based tests ----------------------------------------
