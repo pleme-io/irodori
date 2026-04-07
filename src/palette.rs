@@ -6,8 +6,10 @@
 //! [`NORD`] constant, organised into four groups via [`NordPalette`].
 
 use std::fmt;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 /// An sRGB color with 8-bit channels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -137,6 +139,15 @@ impl fmt::Display for Color {
     }
 }
 
+impl FromStr for Color {
+    type Err = HexParseError;
+
+    /// Parses a color from a hex string, delegating to [`Color::from_hex`].
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_hex(s)
+    }
+}
+
 // ── sRGB transfer functions ────────────────────────────────────────────
 
 /// sRGB to linear conversion for a single component.
@@ -161,26 +172,15 @@ fn linear_to_srgb(c: f32) -> f32 {
 // ── Hex parse error ────────────────────────────────────────────────────
 
 /// Errors returned when parsing a hex color string.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum HexParseError {
     /// The string (after stripping `#`) was not exactly 6 characters.
+    #[error("expected 6 hex digits, got {0}")]
     InvalidLength(usize),
     /// A character was not a valid hexadecimal digit.
+    #[error("invalid hex character")]
     InvalidChar,
 }
-
-impl fmt::Display for HexParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidLength(n) => {
-                write!(f, "expected 6 hex digits, got {n}")
-            }
-            Self::InvalidChar => write!(f, "invalid hex character"),
-        }
-    }
-}
-
-impl std::error::Error for HexParseError {}
 
 // ── Nord palette ───────────────────────────────────────────────────────
 
