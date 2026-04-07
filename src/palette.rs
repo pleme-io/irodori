@@ -173,6 +173,7 @@ fn linear_to_srgb(c: f32) -> f32 {
 
 /// Errors returned when parsing a hex color string.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[non_exhaustive]
 pub enum HexParseError {
     /// The string (after stripping `#`) was not exactly 6 characters.
     #[error("expected 6 hex digits, got {0}")]
