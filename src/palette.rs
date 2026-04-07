@@ -302,6 +302,19 @@ impl<'a> IntoIterator for &'a NordPalette {
     }
 }
 
+impl fmt::Display for NordPalette {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "NordPalette[")?;
+        for (i, color) in self.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{color}")?;
+        }
+        write!(f, "]")
+    }
+}
+
 /// The canonical Nord palette.
 ///
 /// Values from <https://www.nordtheme.com/docs/colors-and-palettes>.
@@ -643,6 +656,28 @@ mod tests {
         assert_eq!(NORD.snow_storm.len(), 3);
         assert_eq!(NORD.frost.len(), 4);
         assert_eq!(NORD.aurora.len(), 5);
+    }
+
+    // -- NordPalette Display -------------------------------------------
+
+    #[test]
+    fn nord_palette_display_contains_all_colors() {
+        let display = format!("{NORD}");
+        assert!(display.starts_with("NordPalette["));
+        assert!(display.ends_with(']'));
+        for color in &NORD {
+            assert!(
+                display.contains(&color.to_hex()),
+                "display missing {color}"
+            );
+        }
+    }
+
+    #[test]
+    fn nord_palette_display_has_16_colors() {
+        let display = format!("{NORD}");
+        let count = display.matches('#').count();
+        assert_eq!(count, 16);
     }
 
     // -- Serde ----------------------------------------------------------
