@@ -197,6 +197,32 @@ pub struct NordPalette {
     pub aurora: [Color; 5],
 }
 
+impl NordPalette {
+    /// Returns all 16 palette colors in Nord index order (nord0..nord15).
+    #[must_use]
+    pub fn all_colors(&self) -> [Color; 16] {
+        let mut out = [Color::new(0, 0, 0); 16];
+        let mut i = 0;
+        for &c in &self.polar_night {
+            out[i] = c;
+            i += 1;
+        }
+        for &c in &self.snow_storm {
+            out[i] = c;
+            i += 1;
+        }
+        for &c in &self.frost {
+            out[i] = c;
+            i += 1;
+        }
+        for &c in &self.aurora {
+            out[i] = c;
+            i += 1;
+        }
+        out
+    }
+}
+
 /// The canonical Nord palette.
 ///
 /// Values from <https://www.nordtheme.com/docs/colors-and-palettes>.
