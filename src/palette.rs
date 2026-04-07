@@ -134,6 +134,30 @@ impl Color {
     }
 }
 
+impl From<[u8; 3]> for Color {
+    fn from(rgb: [u8; 3]) -> Self {
+        Self::new(rgb[0], rgb[1], rgb[2])
+    }
+}
+
+impl From<Color> for [u8; 3] {
+    fn from(c: Color) -> Self {
+        [c.r, c.g, c.b]
+    }
+}
+
+impl From<(u8, u8, u8)> for Color {
+    fn from((r, g, b): (u8, u8, u8)) -> Self {
+        Self::new(r, g, b)
+    }
+}
+
+impl From<Color> for (u8, u8, u8) {
+    fn from(c: Color) -> Self {
+        (c.r, c.g, c.b)
+    }
+}
+
 impl Default for Color {
     fn default() -> Self {
         Self::new(0, 0, 0)
@@ -277,6 +301,50 @@ mod tests {
         assert_eq!(c.g, 0x34);
         assert_eq!(c.b, 0x40);
     }
+
+    // -- From / Into conversions ----------------------------------------
+
+    #[test]
+    fn from_array() {
+        let c: Color = [0x88, 0xC0, 0xD0].into();
+        assert_eq!(c, Color::new(0x88, 0xC0, 0xD0));
+    }
+
+    #[test]
+    fn into_array() {
+        let arr: [u8; 3] = Color::new(0x88, 0xC0, 0xD0).into();
+        assert_eq!(arr, [0x88, 0xC0, 0xD0]);
+    }
+
+    #[test]
+    fn from_tuple() {
+        let c: Color = (0x2E, 0x34, 0x40).into();
+        assert_eq!(c, Color::new(0x2E, 0x34, 0x40));
+    }
+
+    #[test]
+    fn into_tuple() {
+        let t: (u8, u8, u8) = Color::new(0x2E, 0x34, 0x40).into();
+        assert_eq!(t, (0x2E, 0x34, 0x40));
+    }
+
+    #[test]
+    fn array_roundtrip() {
+        let c = Color::new(100, 200, 50);
+        let arr: [u8; 3] = c.into();
+        let back: Color = arr.into();
+        assert_eq!(c, back);
+    }
+
+    #[test]
+    fn tuple_roundtrip() {
+        let c = Color::new(100, 200, 50);
+        let t: (u8, u8, u8) = c.into();
+        let back: Color = t.into();
+        assert_eq!(c, back);
+    }
+
+    // -- Default --------------------------------------------------------
 
     #[test]
     fn color_default_is_black() {
