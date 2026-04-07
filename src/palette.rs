@@ -256,6 +256,7 @@ pub const NORD: NordPalette = NordPalette {
 // ── Tests ──────────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
 
@@ -619,8 +620,8 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn srgb_linear_roundtrip_all_byte_values() {
-        // Every possible u8 value should survive the sRGB->linear->sRGB roundtrip.
         for i in 0..=255_u8 {
             let srgb_f = f32::from(i) / 255.0;
             let lin = srgb_to_linear(srgb_f);
@@ -772,18 +773,14 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     fn lerp_between_nord_frost_endpoints() {
         let a = NORD.frost[0]; // #8FBCBB
         let b = NORD.frost[3]; // #5E81AC
         let mid = a.lerp(&b, 0.5);
-        // Midpoints: (0x8F+0x5E)/2 = 118.5 -> 119 (0x77)
-        //            (0xBC+0x81)/2 = 158.5 -> 159 (0x9F)
-        //            (0xBB+0xAC)/2 = 179.5 -> 180 (0xB4)
-        // Using float: (143+94)/2=118.5, (188+129)/2=158.5, (187+172)/2=179.5
-        // After f32 division by 255 and back: verify approximately correct.
-        let expected_r = ((f32::from(0x8F_u8) / 255.0 + f32::from(0x5E_u8) / 255.0) / 2.0 * 255.0).round() as u8;
-        let expected_g = ((f32::from(0xBC_u8) / 255.0 + f32::from(0x81_u8) / 255.0) / 2.0 * 255.0).round() as u8;
-        let expected_b = ((f32::from(0xBB_u8) / 255.0 + f32::from(0xAC_u8) / 255.0) / 2.0 * 255.0).round() as u8;
+        let expected_r = (f32::midpoint(f32::from(0x8F_u8) / 255.0, f32::from(0x5E_u8) / 255.0) * 255.0).round() as u8;
+        let expected_g = (f32::midpoint(f32::from(0xBC_u8) / 255.0, f32::from(0x81_u8) / 255.0) * 255.0).round() as u8;
+        let expected_b = (f32::midpoint(f32::from(0xBB_u8) / 255.0, f32::from(0xAC_u8) / 255.0) * 255.0).round() as u8;
         assert_eq!(mid, Color::new(expected_r, expected_g, expected_b));
     }
 
@@ -1009,7 +1006,7 @@ mod tests {
             fn to_rgb_f32_in_unit_range(c in arb_color()) {
                 let rgb = c.to_rgb_f32();
                 for ch in rgb {
-                    prop_assert!(ch >= 0.0 && ch <= 1.0, "channel out of range: {ch}");
+                    prop_assert!((0.0..=1.0).contains(&ch), "channel out of range: {ch}");
                 }
             }
 
@@ -1017,7 +1014,7 @@ mod tests {
             fn to_linear_in_unit_range(c in arb_color()) {
                 let lin = c.to_linear();
                 for ch in lin {
-                    prop_assert!(ch >= 0.0 && ch <= 1.0, "channel out of range: {ch}");
+                    prop_assert!((0.0..=1.0).contains(&ch), "channel out of range: {ch}");
                 }
             }
 
@@ -1037,15 +1034,15 @@ mod tests {
             fn with_alpha_preserves_rgb(c in arb_color(), alpha in 0.0_f32..=1.0) {
                 let rgb = c.to_rgb_f32();
                 let rgba = c.with_alpha(alpha);
-                prop_assert_eq!(rgba[0], rgb[0]);
-                prop_assert_eq!(rgba[1], rgb[1]);
-                prop_assert_eq!(rgba[2], rgb[2]);
+                prop_assert!((rgba[0] - rgb[0]).abs() < f32::EPSILON);
+                prop_assert!((rgba[1] - rgb[1]).abs() < f32::EPSILON);
+                prop_assert!((rgba[2] - rgb[2]).abs() < f32::EPSILON);
             }
 
             #[test]
             fn with_alpha_clamps_finite(c in arb_color(), alpha in -1e6_f32..=1e6) {
                 let rgba = c.with_alpha(alpha);
-                prop_assert!(rgba[3] >= 0.0 && rgba[3] <= 1.0);
+                prop_assert!((0.0..=1.0).contains(&rgba[3]));
             }
 
             #[test]
@@ -1057,7 +1054,7 @@ mod tests {
                 let c = Color::from_rgb_f32([r, g, b]);
                 let rgb = c.to_rgb_f32();
                 for ch in rgb {
-                    prop_assert!(ch >= 0.0 && ch <= 1.0);
+                    prop_assert!((0.0..=1.0).contains(&ch));
                 }
             }
 
