@@ -892,4 +892,216 @@ mod tests {
         let c = Color::new(255, 255, 255);
         assert_eq!(format!("{c}"), "#FFFFFF");
     }
+
+    // -- FromStr tests -------------------------------------------------------
+
+    #[test]
+    fn from_str_with_hash() {
+        let c: Color = "#88C0D0".parse().unwrap();
+        assert_eq!(c, Color::new(0x88, 0xC0, 0xD0));
+    }
+
+    #[test]
+    fn from_str_without_hash() {
+        let c: Color = "2E3440".parse().unwrap();
+        assert_eq!(c, Color::new(0x2E, 0x34, 0x40));
+    }
+
+    #[test]
+    fn from_str_invalid_returns_error() {
+        let err = "ZZZ".parse::<Color>().unwrap_err();
+        assert_eq!(err, HexParseError::InvalidLength(3));
+    }
+
+    // -- NordPalette::all_colors tests ----------------------------------------
+
+    #[test]
+    fn all_colors_has_16_entries() {
+        assert_eq!(NORD.all_colors().len(), 16);
+    }
+
+    #[test]
+    fn all_colors_starts_with_polar_night() {
+        let all = NORD.all_colors();
+        for (i, &c) in NORD.polar_night.iter().enumerate() {
+            assert_eq!(all[i], c, "mismatch at index {i}");
+        }
+    }
+
+    #[test]
+    fn all_colors_ends_with_aurora() {
+        let all = NORD.all_colors();
+        for (i, &c) in NORD.aurora.iter().enumerate() {
+            assert_eq!(all[11 + i], c, "mismatch at aurora index {i}");
+        }
+    }
+
+    #[test]
+    fn all_colors_contains_every_subgroup() {
+        let all = NORD.all_colors();
+        let mut offset = 0;
+        for &c in &NORD.polar_night {
+            assert_eq!(all[offset], c);
+            offset += 1;
+        }
+        for &c in &NORD.snow_storm {
+            assert_eq!(all[offset], c);
+            offset += 1;
+        }
+        for &c in &NORD.frost {
+            assert_eq!(all[offset], c);
+            offset += 1;
+        }
+        for &c in &NORD.aurora {
+            assert_eq!(all[offset], c);
+            offset += 1;
+        }
+        assert_eq!(offset, 16);
+    }
+
+    // -- proptest property-based tests ----------------------------------------
+
+    mod prop {
+        use super::*;
+        use proptest::prelude::*;
+
+        fn arb_color() -> impl Strategy<Value = Color> {
+            (any::<u8>(), any::<u8>(), any::<u8>())
+                .prop_map(|(r, g, b)| Color::new(r, g, b))
+        }
+
+        proptest! {
+            #[test]
+            fn hex_roundtrip(c in arb_color()) {
+                let hex = c.to_hex();
+                let parsed = Color::from_hex(&hex).unwrap();
+                prop_assert_eq!(parsed, c);
+            }
+
+            #[test]
+            fn from_str_matches_from_hex(c in arb_color()) {
+                let hex = c.to_hex();
+                let from_str: Color = hex.parse().unwrap();
+                let from_hex = Color::from_hex(&hex).unwrap();
+                prop_assert_eq!(from_str, from_hex);
+            }
+
+            #[test]
+            fn display_matches_to_hex(c in arb_color()) {
+                prop_assert_eq!(format!("{c}"), c.to_hex());
+            }
+
+            #[test]
+            fn rgb_f32_roundtrip(c in arb_color()) {
+                let floats = c.to_rgb_f32();
+                let back = Color::from_rgb_f32(floats);
+                prop_assert_eq!(back, c);
+            }
+
+            #[test]
+            fn linear_roundtrip(c in arb_color()) {
+                let linear = c.to_linear();
+                let back = Color::from_linear(linear);
+                prop_assert_eq!(back, c);
+            }
+
+            #[test]
+            fn to_rgb_f32_in_unit_range(c in arb_color()) {
+                let rgb = c.to_rgb_f32();
+                for ch in rgb {
+                    prop_assert!(ch >= 0.0 && ch <= 1.0, "channel out of range: {ch}");
+                }
+            }
+
+            #[test]
+            fn to_linear_in_unit_range(c in arb_color()) {
+                let lin = c.to_linear();
+                for ch in lin {
+                    prop_assert!(ch >= 0.0 && ch <= 1.0, "channel out of range: {ch}");
+                }
+            }
+
+            #[test]
+            fn lerp_endpoints(a in arb_color(), b in arb_color()) {
+                prop_assert_eq!(a.lerp(&b, 0.0), a);
+                prop_assert_eq!(a.lerp(&b, 1.0), b);
+            }
+
+            #[test]
+            fn lerp_clamps_t(a in arb_color(), b in arb_color()) {
+                prop_assert_eq!(a.lerp(&b, -100.0), a);
+                prop_assert_eq!(a.lerp(&b, 100.0), b);
+            }
+
+            #[test]
+            fn with_alpha_preserves_rgb(c in arb_color(), alpha in 0.0_f32..=1.0) {
+                let rgb = c.to_rgb_f32();
+                let rgba = c.with_alpha(alpha);
+                prop_assert_eq!(rgba[0], rgb[0]);
+                prop_assert_eq!(rgba[1], rgb[1]);
+                prop_assert_eq!(rgba[2], rgb[2]);
+            }
+
+            #[test]
+            fn with_alpha_clamps_finite(c in arb_color(), alpha in -1e6_f32..=1e6) {
+                let rgba = c.with_alpha(alpha);
+                prop_assert!(rgba[3] >= 0.0 && rgba[3] <= 1.0);
+            }
+
+            #[test]
+            fn from_rgb_f32_always_produces_valid_color(
+                r in -1e6_f32..=1e6,
+                g in -1e6_f32..=1e6,
+                b in -1e6_f32..=1e6,
+            ) {
+                let c = Color::from_rgb_f32([r, g, b]);
+                let rgb = c.to_rgb_f32();
+                for ch in rgb {
+                    prop_assert!(ch >= 0.0 && ch <= 1.0);
+                }
+            }
+
+            #[test]
+            fn serde_json_roundtrip(c in arb_color()) {
+                let json = serde_json::to_string(&c).unwrap();
+                let back: Color = serde_json::from_str(&json).unwrap();
+                prop_assert_eq!(back, c);
+            }
+
+            #[test]
+            fn hex_without_hash_roundtrip(c in arb_color()) {
+                let hex = c.to_hex();
+                let without_hash = &hex[1..];
+                let parsed = Color::from_hex(without_hash).unwrap();
+                prop_assert_eq!(parsed, c);
+            }
+
+            #[test]
+            fn hex_parse_rejects_wrong_length(
+                s in "[0-9a-fA-F]{0,5}|[0-9a-fA-F]{7,12}"
+            ) {
+                let result = Color::from_hex(&s);
+                prop_assert!(result.is_err());
+            }
+
+            #[test]
+            fn lerp_midpoint_channel_bound(
+                r1 in any::<u8>(), g1 in any::<u8>(), b1 in any::<u8>(),
+                r2 in any::<u8>(), g2 in any::<u8>(), b2 in any::<u8>(),
+            ) {
+                let a = Color::new(r1, g1, b1);
+                let b = Color::new(r2, g2, b2);
+                let mid = a.lerp(&b, 0.5);
+                // Each channel of mid should be between min and max of a and b channels
+                let check = |ca: u8, cb: u8, cm: u8| {
+                    let lo = ca.min(cb);
+                    let hi = ca.max(cb);
+                    cm >= lo && cm <= hi
+                };
+                prop_assert!(check(a.r, b.r, mid.r), "r: {} not between {} and {}", mid.r, a.r, b.r);
+                prop_assert!(check(a.g, b.g, mid.g), "g: {} not between {} and {}", mid.g, a.g, b.g);
+                prop_assert!(check(a.b, b.b, mid.b), "b: {} not between {} and {}", mid.b, a.b, b.b);
+            }
+        }
+    }
 }
