@@ -1430,7 +1430,6 @@ mod tests {
                 let a = Color::new(r1, g1, b1);
                 let b = Color::new(r2, g2, b2);
                 let mid = a.lerp(&b, 0.5);
-                // Each channel of mid should be between min and max of a and b channels
                 let check = |ca: u8, cb: u8, cm: u8| {
                     let lo = ca.min(cb);
                     let hi = ca.max(cb);
@@ -1439,6 +1438,47 @@ mod tests {
                 prop_assert!(check(a.r, b.r, mid.r), "r: {} not between {} and {}", mid.r, a.r, b.r);
                 prop_assert!(check(a.g, b.g, mid.g), "g: {} not between {} and {}", mid.g, a.g, b.g);
                 prop_assert!(check(a.b, b.b, mid.b), "b: {} not between {} and {}", mid.b, a.b, b.b);
+            }
+
+            #[test]
+            fn array_roundtrip(c in arb_color()) {
+                let arr: [u8; 3] = c.into();
+                let back: Color = arr.into();
+                prop_assert_eq!(back, c);
+            }
+
+            #[test]
+            fn tuple_roundtrip(c in arb_color()) {
+                let t: (u8, u8, u8) = c.into();
+                let back: Color = t.into();
+                prop_assert_eq!(back, c);
+            }
+
+            #[test]
+            fn luminance_in_unit_range(c in arb_color()) {
+                let lum = c.luminance();
+                prop_assert!((0.0..=1.0).contains(&lum), "luminance {lum} out of range");
+            }
+
+            #[test]
+            fn contrast_ratio_at_least_one(a in arb_color(), b in arb_color()) {
+                let ratio = a.contrast_ratio(&b);
+                prop_assert!(ratio >= 1.0, "contrast ratio {ratio} < 1.0");
+            }
+
+            #[test]
+            fn contrast_ratio_symmetric(a in arb_color(), b in arb_color()) {
+                let ab = a.contrast_ratio(&b);
+                let ba = b.contrast_ratio(&a);
+                prop_assert!((ab - ba).abs() < 1e-5, "not symmetric: {ab} vs {ba}");
+            }
+
+            #[test]
+            fn try_from_str_matches_from_hex(c in arb_color()) {
+                let hex = c.to_hex();
+                let from_try: Color = Color::try_from(hex.as_str()).unwrap();
+                let from_hex = Color::from_hex(&hex).unwrap();
+                prop_assert_eq!(from_try, from_hex);
             }
         }
     }
