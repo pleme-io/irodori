@@ -255,6 +255,26 @@ impl NordPalette {
         ]
     }
 
+    /// Returns the color at the given Nord index (0..=15).
+    ///
+    /// Returns `None` if the index is out of range.
+    #[must_use]
+    pub fn get(&self, index: usize) -> Option<Color> {
+        self.all_colors().get(index).copied()
+    }
+
+    /// Returns the number of colors in the palette.
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        16
+    }
+
+    /// Returns `true` if the palette is empty (always `false`).
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        false
+    }
+
     /// Returns an iterator over all 16 palette colors in Nord index order.
     #[must_use]
     pub fn iter(&self) -> std::array::IntoIter<Color, 16> {
@@ -1082,6 +1102,34 @@ mod tests {
             offset += 1;
         }
         assert_eq!(offset, 16);
+    }
+
+    // -- NordPalette::get, len, is_empty ----------------------------------
+
+    #[test]
+    fn get_nord0() {
+        assert_eq!(NORD.get(0), Some(NORD.polar_night[0]));
+    }
+
+    #[test]
+    fn get_nord15() {
+        assert_eq!(NORD.get(15), Some(NORD.aurora[4]));
+    }
+
+    #[test]
+    fn get_out_of_bounds() {
+        assert_eq!(NORD.get(16), None);
+        assert_eq!(NORD.get(usize::MAX), None);
+    }
+
+    #[test]
+    fn len_is_16() {
+        assert_eq!(NORD.len(), 16);
+    }
+
+    #[test]
+    fn is_empty_false() {
+        assert!(!NORD.is_empty());
     }
 
     // -- NordPalette::iter and IntoIterator --------------------------------
