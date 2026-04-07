@@ -33,6 +33,7 @@ impl Color {
     /// Parses a hex color string (with or without leading `#`).
     ///
     /// Accepts `"#2E3440"` or `"2E3440"` (case-insensitive, 6 hex digits).
+    #[must_use = "this returns the parsed color, it doesn't modify anything"]
     pub fn from_hex(hex: impl AsRef<str>) -> Result<Self, HexParseError> {
         let hex = hex.as_ref();
         let hex = hex.strip_prefix('#').unwrap_or(hex);
