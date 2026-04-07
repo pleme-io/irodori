@@ -328,4 +328,109 @@ mod tests {
             );
         }
     }
+
+    // -- all_colors integration -----------------------------------------------
+
+    #[test]
+    fn semantic_colors_are_subset_of_palette() {
+        let all = NORD.all_colors();
+        let c = SemanticColors::nord();
+        let semantic = [
+            c.background, c.foreground, c.accent, c.selection,
+            c.error, c.warning, c.success, c.muted, c.border,
+        ];
+        for s in &semantic {
+            assert!(
+                all.contains(s),
+                "semantic color {s} not found in palette"
+            );
+        }
+    }
+
+    // -- Display roundtrip via individual fields ------------------------------
+
+    #[test]
+    fn display_output_is_not_empty() {
+        let display = format!("{}", SemanticColors::nord());
+        assert!(!display.is_empty());
+        assert!(display.starts_with("SemanticColors {"));
+    }
+
+    // -- Serde deserialization from known JSON ---------------------------------
+
+    #[test]
+    fn serde_deserialize_from_known_json() {
+        let nord = SemanticColors::nord();
+        let json = serde_json::to_string_pretty(&nord).unwrap();
+        let back: SemanticColors = serde_json::from_str(&json).unwrap();
+        assert_eq!(nord, back);
+    }
+
+    // -- proptest property tests for SemanticColors ----------------------------
+
+    mod prop {
+        use super::*;
+        use proptest::prelude::*;
+
+        fn arb_color() -> impl Strategy<Value = Color> {
+            (any::<u8>(), any::<u8>(), any::<u8>())
+                .prop_map(|(r, g, b)| Color::new(r, g, b))
+        }
+
+        fn arb_palette() -> impl Strategy<Value = NordPalette> {
+            (
+                proptest::array::uniform4(arb_color()),
+                proptest::array::uniform3(arb_color()),
+                proptest::array::uniform4(arb_color()),
+                proptest::array::uniform5(arb_color()),
+            )
+                .prop_map(|(pn, ss, fr, au)| NordPalette {
+                    polar_night: pn,
+                    snow_storm: ss,
+                    frost: fr,
+                    aurora: au,
+                })
+        }
+
+        proptest! {
+            #[test]
+            fn from_palette_maps_expected_slots(p in arb_palette()) {
+                let s = SemanticColors::from_palette(&p);
+                prop_assert_eq!(s.background, p.polar_night[0]);
+                prop_assert_eq!(s.foreground, p.snow_storm[0]);
+                prop_assert_eq!(s.accent, p.frost[1]);
+                prop_assert_eq!(s.selection, p.frost[2]);
+                prop_assert_eq!(s.error, p.aurora[0]);
+                prop_assert_eq!(s.warning, p.aurora[2]);
+                prop_assert_eq!(s.success, p.aurora[3]);
+                prop_assert_eq!(s.muted, p.polar_night[3]);
+                prop_assert_eq!(s.border, p.polar_night[2]);
+            }
+
+            #[test]
+            fn serde_roundtrip(p in arb_palette()) {
+                let s = SemanticColors::from_palette(&p);
+                let json = serde_json::to_string(&s).unwrap();
+                let back: SemanticColors = serde_json::from_str(&json).unwrap();
+                prop_assert_eq!(s, back);
+            }
+
+            #[test]
+            fn display_contains_all_field_hexes(p in arb_palette()) {
+                let s = SemanticColors::from_palette(&p);
+                let display = format!("{s}");
+                prop_assert!(display.contains(&s.background.to_hex()));
+                prop_assert!(display.contains(&s.foreground.to_hex()));
+                prop_assert!(display.contains(&s.accent.to_hex()));
+                prop_assert!(display.contains(&s.error.to_hex()));
+            }
+
+            #[test]
+            fn palette_serde_roundtrip(p in arb_palette()) {
+                let json = serde_json::to_string(&p).unwrap();
+                let back: NordPalette = serde_json::from_str(&json).unwrap();
+                prop_assert_eq!(p, back);
+            }
+        }
+    }
 }
