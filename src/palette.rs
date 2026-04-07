@@ -133,6 +133,12 @@ impl Color {
     }
 }
 
+impl Default for Color {
+    fn default() -> Self {
+        Self::new(0, 0, 0)
+    }
+}
+
 impl fmt::Display for Color {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
@@ -269,6 +275,13 @@ mod tests {
         assert_eq!(c.r, 0x2E);
         assert_eq!(c.g, 0x34);
         assert_eq!(c.b, 0x40);
+    }
+
+    #[test]
+    fn color_default_is_black() {
+        let c = Color::default();
+        assert_eq!(c, Color::new(0, 0, 0));
+        assert_eq!(c.to_hex(), "#000000");
     }
 
     // -- Hex parsing ----------------------------------------------------
