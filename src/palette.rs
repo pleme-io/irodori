@@ -6,13 +6,14 @@
 //! [`NORD`] constant, organised into four groups via [`NordPalette`].
 
 use std::fmt;
+use std::hash::Hash;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// An sRGB color with 8-bit channels.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Color {
     /// Red channel (0..=255).
     pub r: u8,
@@ -178,7 +179,7 @@ fn linear_to_srgb(c: f32) -> f32 {
 // ── Hex parse error ────────────────────────────────────────────────────
 
 /// Errors returned when parsing a hex color string.
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Error)]
 #[non_exhaustive]
 pub enum HexParseError {
     /// The string (after stripping `#`) was not exactly 6 characters.
@@ -192,7 +193,7 @@ pub enum HexParseError {
 // ── Nord palette ───────────────────────────────────────────────────────
 
 /// The complete Nord color palette, organised into its four named groups.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct NordPalette {
     /// Polar Night (nord0..nord3) — dark background tones.
     pub polar_night: [Color; 4],
@@ -862,6 +863,16 @@ mod tests {
         #[allow(clippy::clone_on_copy)]
         let b = a.clone();
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn color_is_hashable() {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(Color::new(10, 20, 30));
+        set.insert(Color::new(10, 20, 30));
+        set.insert(Color::new(40, 50, 60));
+        assert_eq!(set.len(), 2);
     }
 
     #[test]

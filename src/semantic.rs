@@ -15,7 +15,7 @@ use crate::palette::{Color, NordPalette, NORD};
 /// Each field maps a UI role to a concrete [`Color`]. This is the primary
 /// type consumers use for theming — swap the `SemanticColors` instance to
 /// change the entire application theme.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SemanticColors {
     /// Primary background color (darkest surface).
     pub background: Color,
@@ -267,6 +267,15 @@ mod tests {
         #[allow(clippy::clone_on_copy)]
         let b = a.clone();
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn semantic_colors_is_hashable() {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(SemanticColors::nord());
+        set.insert(SemanticColors::nord());
+        assert_eq!(set.len(), 1);
     }
 
     #[test]
