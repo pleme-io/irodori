@@ -1482,4 +1482,185 @@ mod tests {
             }
         }
     }
+
+    // -- luminance BT.709 coefficient verification ----------------------------
+
+    #[test]
+    fn luminance_pure_red_matches_bt709_coefficient() {
+        // BT.709: red coefficient = 0.2126
+        let lum = Color::new(255, 0, 0).luminance();
+        assert!(
+            (lum - 0.2126).abs() < 0.001,
+            "pure red luminance should be ~0.2126, got {lum}"
+        );
+    }
+
+    #[test]
+    fn luminance_pure_green_matches_bt709_coefficient() {
+        // BT.709: green coefficient = 0.7152
+        let lum = Color::new(0, 255, 0).luminance();
+        assert!(
+            (lum - 0.7152).abs() < 0.001,
+            "pure green luminance should be ~0.7152, got {lum}"
+        );
+    }
+
+    #[test]
+    fn luminance_pure_blue_matches_bt709_coefficient() {
+        // BT.709: blue coefficient = 0.0722
+        let lum = Color::new(0, 0, 255).luminance();
+        assert!(
+            (lum - 0.0722).abs() < 0.001,
+            "pure blue luminance should be ~0.0722, got {lum}"
+        );
+    }
+
+    #[test]
+    fn luminance_coefficients_sum_to_one() {
+        let r = Color::new(255, 0, 0).luminance();
+        let g = Color::new(0, 255, 0).luminance();
+        let b = Color::new(0, 0, 255).luminance();
+        let sum = r + g + b;
+        assert!(
+            (sum - 1.0).abs() < 0.01,
+            "BT.709 coefficients should sum to 1.0, got {sum}"
+        );
+    }
+
+    // -- contrast_ratio upper bound -------------------------------------------
+
+    #[test]
+    fn contrast_ratio_bounded_by_21() {
+        // Maximum possible contrast is black vs white = 21:1
+        let ratio = Color::new(0, 0, 0).contrast_ratio(&Color::new(255, 255, 255));
+        assert!(
+            ratio <= 21.1,
+            "contrast ratio should not exceed ~21, got {ratio}"
+        );
+    }
+
+    #[test]
+    fn contrast_ratio_very_similar_colors_near_one() {
+        let a = Color::new(128, 128, 128);
+        let b = Color::new(129, 128, 128);
+        let ratio = a.contrast_ratio(&b);
+        assert!(
+            ratio < 1.05,
+            "nearly identical colors should have ratio ~1.0, got {ratio}"
+        );
+    }
+
+    // -- from_linear edge cases -----------------------------------------------
+
+    #[test]
+    fn from_linear_clamps_negative_to_black() {
+        let c = Color::from_linear([-0.5, -1.0, -0.001]);
+        assert_eq!(c, Color::new(0, 0, 0));
+    }
+
+    #[test]
+    fn from_linear_clamps_above_one_to_white() {
+        let c = Color::from_linear([1.5, 2.0, 100.0]);
+        assert_eq!(c, Color::new(255, 255, 255));
+    }
+
+    #[test]
+    fn from_linear_zero_is_black() {
+        let c = Color::from_linear([0.0, 0.0, 0.0]);
+        assert_eq!(c, Color::new(0, 0, 0));
+    }
+
+    #[test]
+    fn from_linear_one_is_white() {
+        let c = Color::from_linear([1.0, 1.0, 1.0]);
+        assert_eq!(c, Color::new(255, 255, 255));
+    }
+
+    // -- lerp at precise fractional t values ----------------------------------
+
+    #[test]
+    fn lerp_at_tenth() {
+        let a = Color::new(0, 0, 0);
+        let b = Color::new(100, 200, 50);
+        let result = a.lerp(&b, 0.1);
+        // 100*0.1/255*255 = 10, 200*0.1/255*255 = 20, 50*0.1/255*255 = 5
+        assert_eq!(result, Color::new(10, 20, 5));
+    }
+
+    #[test]
+    fn lerp_at_nine_tenths() {
+        let a = Color::new(0, 0, 0);
+        let b = Color::new(100, 200, 50);
+        let result = a.lerp(&b, 0.9);
+        assert_eq!(result, Color::new(90, 180, 45));
+    }
+
+    #[test]
+    fn lerp_between_two_non_trivial_colors() {
+        let a = Color::new(100, 50, 200);
+        let b = Color::new(200, 150, 100);
+        let mid = a.lerp(&b, 0.5);
+        assert_eq!(mid, Color::new(150, 100, 150));
+    }
+
+    // -- HexParseError traits -------------------------------------------------
+
+    #[test]
+    fn hex_parse_error_debug_output() {
+        let err = HexParseError::InvalidLength(5);
+        let debug = format!("{err:?}");
+        assert!(debug.contains("InvalidLength"));
+        assert!(debug.contains("5"));
+    }
+
+    #[test]
+    fn hex_parse_error_clone() {
+        let err = HexParseError::InvalidChar;
+        let cloned = err.clone();
+        assert_eq!(err, cloned);
+    }
+
+    #[test]
+    fn hex_parse_error_hash() {
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(HexParseError::InvalidChar);
+        set.insert(HexParseError::InvalidLength(3));
+        set.insert(HexParseError::InvalidChar);
+        assert_eq!(set.len(), 2);
+    }
+
+    // -- from_rgb_f32 rounding at 0.5 boundary --------------------------------
+
+    #[test]
+    fn from_rgb_f32_half_rounds_to_128() {
+        // 0.5 * 255 = 127.5, round() = 128
+        let c = Color::from_rgb_f32([0.5, 0.5, 0.5]);
+        assert_eq!(c, Color::new(128, 128, 128));
+    }
+
+    // -- sRGB/linear at exact threshold boundary ------------------------------
+
+    #[test]
+    fn srgb_to_linear_at_threshold_continuity() {
+        // The threshold is 0.04045. Values just below and just above
+        // should produce continuous results (no jump).
+        let below = srgb_to_linear(0.04044);
+        let above = srgb_to_linear(0.04046);
+        assert!(
+            (above - below).abs() < 0.001,
+            "discontinuity at threshold: below={below}, above={above}"
+        );
+    }
+
+    #[test]
+    fn linear_to_srgb_at_threshold_continuity() {
+        // The threshold is 0.003_130_8.
+        let below = linear_to_srgb(0.003_130_7);
+        let above = linear_to_srgb(0.003_130_9);
+        assert!(
+            (above - below).abs() < 0.001,
+            "discontinuity at threshold: below={below}, above={above}"
+        );
+    }
 }

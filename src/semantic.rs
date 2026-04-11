@@ -616,6 +616,98 @@ mod tests {
         );
     }
 
+    // -- Builder individual method tests ----------------------------------------
+
+    #[test]
+    fn builder_override_foreground() {
+        let custom = Color::new(10, 20, 30);
+        let theme = SemanticColorsBuilder::new().foreground(custom).build();
+        assert_eq!(theme.foreground, custom);
+        assert_eq!(theme.background, SemanticColors::nord().background);
+    }
+
+    #[test]
+    fn builder_override_accent() {
+        let custom = Color::new(10, 20, 30);
+        let theme = SemanticColorsBuilder::new().accent(custom).build();
+        assert_eq!(theme.accent, custom);
+        assert_eq!(theme.error, SemanticColors::nord().error);
+    }
+
+    #[test]
+    fn builder_override_selection() {
+        let custom = Color::new(11, 22, 33);
+        let theme = SemanticColorsBuilder::new().selection(custom).build();
+        assert_eq!(theme.selection, custom);
+        assert_eq!(theme.accent, SemanticColors::nord().accent);
+    }
+
+    #[test]
+    fn builder_override_warning() {
+        let custom = Color::new(200, 180, 50);
+        let theme = SemanticColorsBuilder::new().warning(custom).build();
+        assert_eq!(theme.warning, custom);
+        assert_eq!(theme.success, SemanticColors::nord().success);
+    }
+
+    #[test]
+    fn builder_override_muted() {
+        let custom = Color::new(80, 80, 80);
+        let theme = SemanticColorsBuilder::new().muted(custom).build();
+        assert_eq!(theme.muted, custom);
+        assert_eq!(theme.border, SemanticColors::nord().border);
+    }
+
+    #[test]
+    fn builder_override_border() {
+        let custom = Color::new(60, 60, 60);
+        let theme = SemanticColorsBuilder::new().border(custom).build();
+        assert_eq!(theme.border, custom);
+        assert_eq!(theme.muted, SemanticColors::nord().muted);
+    }
+
+    #[test]
+    fn builder_override_all_fields() {
+        let colors: [Color; 9] = [
+            Color::new(1, 1, 1),
+            Color::new(2, 2, 2),
+            Color::new(3, 3, 3),
+            Color::new(4, 4, 4),
+            Color::new(5, 5, 5),
+            Color::new(6, 6, 6),
+            Color::new(7, 7, 7),
+            Color::new(8, 8, 8),
+            Color::new(9, 9, 9),
+        ];
+        let theme = SemanticColorsBuilder::new()
+            .background(colors[0])
+            .foreground(colors[1])
+            .accent(colors[2])
+            .selection(colors[3])
+            .error(colors[4])
+            .warning(colors[5])
+            .success(colors[6])
+            .muted(colors[7])
+            .border(colors[8])
+            .build();
+        assert_eq!(theme.background, colors[0]);
+        assert_eq!(theme.foreground, colors[1]);
+        assert_eq!(theme.accent, colors[2]);
+        assert_eq!(theme.selection, colors[3]);
+        assert_eq!(theme.error, colors[4]);
+        assert_eq!(theme.warning, colors[5]);
+        assert_eq!(theme.success, colors[6]);
+        assert_eq!(theme.muted, colors[7]);
+        assert_eq!(theme.border, colors[8]);
+    }
+
+    #[test]
+    fn builder_debug_output() {
+        let builder = SemanticColorsBuilder::new();
+        let debug = format!("{builder:?}");
+        assert!(debug.contains("SemanticColorsBuilder"));
+    }
+
     // -- proptest property tests for SemanticColors ----------------------------
 
     mod prop {
