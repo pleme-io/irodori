@@ -8,7 +8,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::palette::{Color, NordPalette, NORD};
+use crate::palette::{Color, NORD, NordPalette};
 
 /// Semantic color assignments for UI rendering.
 ///
@@ -49,14 +49,14 @@ impl SemanticColors {
     pub const fn from_palette(palette: &NordPalette) -> Self {
         Self {
             background: palette.polar_night[0], // nord0  #2E3440
-            foreground: palette.snow_storm[0],   // nord4  #D8DEE9
-            accent:     palette.frost[1],        // nord8  #88C0D0
-            selection:  palette.frost[2],        // nord9  #81A1C1
-            error:      palette.aurora[0],       // nord11 #BF616A
-            warning:    palette.aurora[2],       // nord13 #EBCB8B
-            success:    palette.aurora[3],       // nord14 #A3BE8C
-            muted:      palette.polar_night[3],  // nord3  #4C566A
-            border:     palette.polar_night[2],  // nord2  #434C5E
+            foreground: palette.snow_storm[0],  // nord4  #D8DEE9
+            accent: palette.frost[1],           // nord8  #88C0D0
+            selection: palette.frost[2],        // nord9  #81A1C1
+            error: palette.aurora[0],           // nord11 #BF616A
+            warning: palette.aurora[2],         // nord13 #EBCB8B
+            success: palette.aurora[3],         // nord14 #A3BE8C
+            muted: palette.polar_night[3],      // nord3  #4C566A
+            border: palette.polar_night[2],     // nord2  #434C5E
         }
     }
 
@@ -354,16 +354,20 @@ mod tests {
     fn nord_semantic_fields_are_distinct_colors() {
         let c = SemanticColors::nord();
         let all = [
-            c.background, c.foreground, c.accent, c.selection,
-            c.error, c.warning, c.success, c.muted, c.border,
+            c.background,
+            c.foreground,
+            c.accent,
+            c.selection,
+            c.error,
+            c.warning,
+            c.success,
+            c.muted,
+            c.border,
         ];
         // Each pair should be distinct (no duplicates in the Nord mapping).
         for i in 0..all.len() {
             for j in (i + 1)..all.len() {
-                assert_ne!(
-                    all[i], all[j],
-                    "fields at index {i} and {j} should differ"
-                );
+                assert_ne!(all[i], all[j], "fields at index {i} and {j} should differ");
             }
         }
     }
@@ -374,8 +378,15 @@ mod tests {
     fn semantic_colors_linear_values_in_range() {
         let c = SemanticColors::nord();
         let all = [
-            c.background, c.foreground, c.accent, c.selection,
-            c.error, c.warning, c.success, c.muted, c.border,
+            c.background,
+            c.foreground,
+            c.accent,
+            c.selection,
+            c.error,
+            c.warning,
+            c.success,
+            c.muted,
+            c.border,
         ];
         for color in all {
             let lin = color.to_linear();
@@ -427,7 +438,9 @@ mod tests {
     #[test]
     fn display_contains_all_semantic_labels() {
         let display = format!("{}", SemanticColors::nord());
-        for label in &["bg:", "fg:", "accent:", "sel:", "err:", "warn:", "ok:", "muted:", "border:"] {
+        for label in &[
+            "bg:", "fg:", "accent:", "sel:", "err:", "warn:", "ok:", "muted:", "border:",
+        ] {
             assert!(
                 display.contains(label),
                 "display should contain '{label}': {display}"
@@ -464,8 +477,15 @@ mod tests {
     fn serde_semantic_json_field_names() {
         let json = serde_json::to_string(&SemanticColors::nord()).unwrap();
         for field in &[
-            "background", "foreground", "accent", "selection",
-            "error", "warning", "success", "muted", "border",
+            "background",
+            "foreground",
+            "accent",
+            "selection",
+            "error",
+            "warning",
+            "success",
+            "muted",
+            "border",
         ] {
             assert!(
                 json.contains(field),
@@ -481,14 +501,18 @@ mod tests {
         let all = NORD.all_colors();
         let c = SemanticColors::nord();
         let semantic = [
-            c.background, c.foreground, c.accent, c.selection,
-            c.error, c.warning, c.success, c.muted, c.border,
+            c.background,
+            c.foreground,
+            c.accent,
+            c.selection,
+            c.error,
+            c.warning,
+            c.success,
+            c.muted,
+            c.border,
         ];
         for s in &semantic {
-            assert!(
-                all.contains(s),
-                "semantic color {s} not found in palette"
-            );
+            assert!(all.contains(s), "semantic color {s} not found in palette");
         }
     }
 
@@ -522,9 +546,7 @@ mod tests {
     #[test]
     fn builder_override_background() {
         let custom_bg = Color::new(0, 0, 0);
-        let theme = SemanticColorsBuilder::new()
-            .background(custom_bg)
-            .build();
+        let theme = SemanticColorsBuilder::new().background(custom_bg).build();
         assert_eq!(theme.background, custom_bg);
         assert_eq!(theme.foreground, SemanticColors::nord().foreground);
     }
@@ -589,8 +611,15 @@ mod tests {
         assert_eq!(
             names,
             vec![
-                "background", "foreground", "accent", "selection",
-                "error", "warning", "success", "muted", "border",
+                "background",
+                "foreground",
+                "accent",
+                "selection",
+                "error",
+                "warning",
+                "success",
+                "muted",
+                "border",
             ]
         );
     }
@@ -715,8 +744,7 @@ mod tests {
         use proptest::prelude::*;
 
         fn arb_color() -> impl Strategy<Value = Color> {
-            (any::<u8>(), any::<u8>(), any::<u8>())
-                .prop_map(|(r, g, b)| Color::new(r, g, b))
+            (any::<u8>(), any::<u8>(), any::<u8>()).prop_map(|(r, g, b)| Color::new(r, g, b))
         }
 
         fn arb_palette() -> impl Strategy<Value = NordPalette> {

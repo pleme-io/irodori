@@ -40,12 +40,9 @@ impl Color {
         if hex.len() != 6 {
             return Err(HexParseError::InvalidLength(hex.len()));
         }
-        let r = u8::from_str_radix(&hex[0..2], 16)
-            .map_err(|_| HexParseError::InvalidChar)?;
-        let g = u8::from_str_radix(&hex[2..4], 16)
-            .map_err(|_| HexParseError::InvalidChar)?;
-        let b = u8::from_str_radix(&hex[4..6], 16)
-            .map_err(|_| HexParseError::InvalidChar)?;
+        let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| HexParseError::InvalidChar)?;
+        let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| HexParseError::InvalidChar)?;
+        let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| HexParseError::InvalidChar)?;
         Ok(Self { r, g, b })
     }
 
@@ -71,10 +68,7 @@ impl Color {
     ///
     /// Values are clamped to the valid range before quantising to `u8`.
     #[must_use]
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss
-    )]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn from_rgb_f32(rgb: [f32; 3]) -> Self {
         Self {
             r: (rgb[0].clamp(0.0, 1.0) * 255.0).round() as u8,
@@ -271,10 +265,8 @@ impl NordPalette {
         let fr = &self.frost;
         let au = &self.aurora;
         [
-            pn[0], pn[1], pn[2], pn[3],
-            ss[0], ss[1], ss[2],
-            fr[0], fr[1], fr[2], fr[3],
-            au[0], au[1], au[2], au[3], au[4],
+            pn[0], pn[1], pn[2], pn[3], ss[0], ss[1], ss[2], fr[0], fr[1], fr[2], fr[3], au[0],
+            au[1], au[2], au[3], au[4],
         ]
     }
 
@@ -709,10 +701,7 @@ mod tests {
         assert!(display.starts_with("NordPalette["));
         assert!(display.ends_with(']'));
         for color in &NORD {
-            assert!(
-                display.contains(&color.to_hex()),
-                "display missing {color}"
-            );
+            assert!(display.contains(&color.to_hex()), "display missing {color}");
         }
     }
 
@@ -820,8 +809,7 @@ mod tests {
 
     #[test]
     fn hex_parse_error_is_error_trait() {
-        let err: Box<dyn std::error::Error> =
-            Box::new(HexParseError::InvalidChar);
+        let err: Box<dyn std::error::Error> = Box::new(HexParseError::InvalidChar);
         assert_eq!(format!("{err}"), "invalid hex character");
     }
 
@@ -1032,9 +1020,15 @@ mod tests {
         let a = NORD.frost[0]; // #8FBCBB
         let b = NORD.frost[3]; // #5E81AC
         let mid = a.lerp(&b, 0.5);
-        let expected_r = (f32::midpoint(f32::from(0x8F_u8) / 255.0, f32::from(0x5E_u8) / 255.0) * 255.0).round() as u8;
-        let expected_g = (f32::midpoint(f32::from(0xBC_u8) / 255.0, f32::from(0x81_u8) / 255.0) * 255.0).round() as u8;
-        let expected_b = (f32::midpoint(f32::from(0xBB_u8) / 255.0, f32::from(0xAC_u8) / 255.0) * 255.0).round() as u8;
+        let expected_r = (f32::midpoint(f32::from(0x8F_u8) / 255.0, f32::from(0x5E_u8) / 255.0)
+            * 255.0)
+            .round() as u8;
+        let expected_g = (f32::midpoint(f32::from(0xBC_u8) / 255.0, f32::from(0x81_u8) / 255.0)
+            * 255.0)
+            .round() as u8;
+        let expected_b = (f32::midpoint(f32::from(0xBB_u8) / 255.0, f32::from(0xAC_u8) / 255.0)
+            * 255.0)
+            .round() as u8;
         assert_eq!(mid, Color::new(expected_r, expected_g, expected_b));
     }
 
@@ -1304,8 +1298,7 @@ mod tests {
         use proptest::prelude::*;
 
         fn arb_color() -> impl Strategy<Value = Color> {
-            (any::<u8>(), any::<u8>(), any::<u8>())
-                .prop_map(|(r, g, b)| Color::new(r, g, b))
+            (any::<u8>(), any::<u8>(), any::<u8>()).prop_map(|(r, g, b)| Color::new(r, g, b))
         }
 
         proptest! {
