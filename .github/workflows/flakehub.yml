@@ -1,8 +1,10 @@
 name: publish-flakehub
 
+# FLAGGED OFF 2026-07-18 — FlakeHub publishing disabled fleet-wide (401 auth).
+# Manual-only; re-add the `push` trigger to restore. The reusable it calls is
+# also gated off in substrate, so this no-ops regardless.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   flakehub:
