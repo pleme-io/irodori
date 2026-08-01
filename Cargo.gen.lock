@@ -1,6 +1,9 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "cargo_lock_sha256": "45345b083d8ce63a95430e336a3570fd27e12cd416856667c638ae8be37730c7",
+  "manifest_sha256": {
+    "Cargo.toml": "d4f316108c1117aad9c5fbe5c1b47925190ac59c15e721ccff2f4dab251b5463"
+  },
   "target_resolves": {
     "base": {
       "autocfg-1.5.1": {
