@@ -12,5 +12,5 @@ on:
       - "**/Cargo.lock"
 jobs:
   gen-spec:
-    uses: pleme-io/substrate/.github/workflows/reusable-gen-spec.yml@main
+    uses: pleme-io/flows/.github/workflows/reusable-gen-spec.yml@main
     secrets: inherit

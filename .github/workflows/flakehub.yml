@@ -8,7 +8,7 @@ on:
 
 jobs:
   flakehub:
-    uses: pleme-io/substrate/.github/workflows/reusable-flakehub.yml@main
+    uses: pleme-io/flows/.github/workflows/reusable-flakehub.yml@main
     with:
       visibility: public
       rolling: true
